@@ -1,0 +1,31 @@
+[template]
+cargo_generate_version = ">=0.19.0"
+
+[placeholders.layout]
+type = "string"
+prompt = "Project layout"
+default = "bin"
+choices = [
+    { value = "bin", label = "bin        single crate, src/main.rs" },
+    { value = "lib", label = "lib        single crate, src/lib.rs" },
+    { value = "workspace", label = "workspace  crates/<name>/" },
+    { value = "members", label = "members    workspace, <name>/ at the repo root" },
+]
+
+[placeholders.description]
+type = "string"
+prompt = "Description"
+default = ""
+
+[placeholders.author]
+type = "string"
+prompt = "Author"
+default = "Ricky Severino"
+
+[placeholders.gh_user]
+type = "string"
+prompt = "GitHub owner"
+default = "ry-sev"
+
+[hooks]
+pre = ["pre-script.rhai"]

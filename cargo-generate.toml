@@ -1,0 +1,3 @@
+# The template lives in `template/`; this repository's own files are not part of it.
+[template]
+sub_templates = ["template"]

@@ -1,0 +1,181 @@
+## Quick Reference
+
+**Before committing, always run:**
+
+```bash
+cargo fmt --all                                           # Format code
+cargo clippy --all --all-features --tests -- -D warnings  # Lint (must pass)
+cargo test                                                # Run tests
+```
+
+All three commands must pass without errors before code is considered ready.
+
+## Project Layout
+{% case layout %}{% when "bin" %}
+```
+{{project-name}}/
+├── Cargo.toml   # Package manifest: metadata, dependencies, lints, profiles
+└── src/
+    └── main.rs  # Binary entry point
+```
+
+A single binary crate. Add modules as `src/<module>.rs` or `src/<module>/mod.rs`.
+{% when "lib" %}
+```
+{{project-name}}/
+├── Cargo.toml  # Package manifest: metadata, dependencies, lints, profiles
+└── src/
+    └── lib.rs  # Crate root and public API surface
+```
+
+A single library crate. Everything reachable from `lib.rs` is public API — see
+[Documentation](#documentation).
+{% when "workspace" %}
+```
+{{project-name}}/
+├── Cargo.toml              # Workspace root: shared metadata, lints, profiles
+└── crates/
+    └── {{project-name}}/
+        ├── Cargo.toml      # Member manifest
+        └── src/
+            └── main.rs     # Binary entry point
+```
+
+A Cargo workspace. Members live under `crates/` and are picked up by the
+`crates/*` glob, so a new crate needs no edit to the root manifest.
+{% when "members" %}
+```
+{{project-name}}/
+├── Cargo.toml          # Workspace root: shared metadata, lints, profiles
+└── {{project-name}}/
+    ├── Cargo.toml      # Member manifest
+    └── src/
+        └── main.rs     # Binary entry point
+```
+
+A Cargo workspace whose members sit at the repository root. A new crate MUST be
+added to `workspace.members` in the root `Cargo.toml`; there is no glob.
+{% endcase %}{% if is_workspace %}
+### Workspace Rules
+
+- Shared metadata lives in `[workspace.package]`. Members MUST inherit it with
+  `version.workspace = true`, `edition.workspace = true`, and so on. Only `name`
+  and `description` are set per crate.
+- Lints live in `[workspace.lints]`. Every member MUST opt in with:
+
+  ```toml
+  [lints]
+  workspace = true
+  ```
+
+- Dependencies shared by more than one member SHOULD be declared in
+  `[workspace.dependencies]` and referenced with `dep.workspace = true`.
+{% endif %}
+## Build & Run
+
+```bash
+cargo build                 # Build (debug)
+cargo build --release       # Build (release, optimized)
+{% if layout == "lib" %}cargo check                 # Check without building
+cargo doc --open            # Build and open the API docs
+{% elsif is_workspace %}cargo check --workspace     # Check without building
+
+# Run the binary
+cargo run -p {{project-name}}
+
+# Run with less verbose logging
+RUST_LOG=info cargo run -p {{project-name}}
+{% else %}cargo run                   # Run the binary
+RUST_LOG=info cargo run     # Run with less verbose logging
+cargo check                 # Check without building
+{% endif %}```
+
+## Testing
+
+```bash
+cargo test                    # Run all tests{% if is_workspace %}, every member{% endif %}
+cargo test test_name          # Run a single test by name
+cargo test module_name::      # Run tests in a specific module
+cargo test -- --nocapture     # Run tests with output
+cargo test --lib              # Run only unit tests (no integration tests){% if layout == "lib" %}
+cargo test --doc              # Run only doc-comment examples{% endif %}{% if is_workspace %}
+
+# Run tests for a single crate
+cargo test -p {{project-name}}{% endif %}
+```
+
+## Code Quality
+
+### Formatting
+
+```bash
+cargo fmt --all               # Format all code
+cargo fmt --all -- --check    # Check formatting without changing files
+```
+
+- Max line width: 100 characters
+- Use 4 spaces for indentation
+- Rust 2024 edition, format style edition 2024
+
+### Linting
+
+```bash
+cargo clippy --all --all-features --tests -- -D warnings
+```
+
+The project has strict clippy lints enabled in {% if is_workspace %}`[workspace.lints]` in the
+root `Cargo.toml`{% else %}`Cargo.toml`{% endif %}.
+
+## Code Style Guidelines
+
+### General Rules
+
+- No `.unwrap()` in production code (allowed in tests) - use `?` or `.ok_or_else()`
+- Use `parking_lot::{Mutex, RwLock}` instead of `std::sync` equivalents
+- Use `Self` instead of repeating the type name
+- Inline format args: `format!("{x}")` not `format!("{}", x)`
+
+### Imports
+
+Default behavior of `rustfmt`. Do not change the granularity of any imports and preserve the original structure written by the developer.
+
+### Comments
+
+Short sentences. RFC 2119 keywords for obligations. Commit = imperative subject; body only for a fact the diff cannot show. Comments only where code needs clarification — never narration.
+
+### Struct and Enum Members
+
+When members of a `struct`, `enum`, or similar item carry doc comments, separate each
+member with a blank line. The comment and the member it describes read as one unit, and
+without the blank line adjacent units run together.
+
+Undocumented members need no blank line between them.
+
+### Error Handling
+
+- Use `thiserror` for library errors, `anyhow` for application errors
+- Prefer `Result<T, E>` over panics
+- Use `expect()` only when failure is truly impossible or during initialization
+- Never use `unwrap()` in library code
+
+### Logging
+
+Use the `log` crate macros:
+
+```rust
+log::info!("...");
+log::debug!("...");
+log::warn!("...");
+log::error!("...");
+```
+
+### Documentation
+
+- Document all public APIs with `///` doc comments
+- Include examples in doc comments for complex functions
+- Use `//!` for module-level documentation
+- Keep comments concise and up-to-date
+{%- if layout == "lib" %}
+- Every item exported from `lib.rs` MUST carry a `///` doc comment
+- Doc examples are compiled and run by `cargo test`; keep them working
+{%- endif %}

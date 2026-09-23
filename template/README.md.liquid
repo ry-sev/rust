@@ -1,0 +1,53 @@
+# {{project-name}}
+
+{{description}}
+
+## Build
+
+Debug build:
+
+```
+cargo build
+```
+
+Release build:
+
+```
+cargo build --release
+```
+{% if layout != "lib" %}
+Run:
+
+```
+{% if is_workspace %}cargo run -p {{project-name}}{% else %}cargo run{% endif %}
+```
+{% endif %}
+Run tests:
+
+```
+cargo test
+```
+
+## Development
+
+```bash
+# Format code
+cargo fmt --all
+
+# Run linter
+cargo clippy --all --all-features --tests -- -D warnings
+
+# Run tests
+cargo test
+{%- if layout != "lib" %}
+
+# Run with debug logging
+RUST_LOG=debug cargo run{% if is_workspace %} -p {{project-name}}{% endif %}
+{%- endif %}
+```
+
+#### License
+
+<sup>
+Licensed under <a href="LICENSE">MIT license</a>.
+</sup>
