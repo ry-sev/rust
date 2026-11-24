@@ -1,0 +1,88 @@
+{
+  description = "{% if description != "" %}{{description}}{% else %}{{project-name}}{% endif %}";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
+
+  outputs =
+    { nixpkgs, rust-overlay, ... }:
+    let
+      forEachSystem =
+        f:
+        nixpkgs.lib.genAttrs
+          [
+            "x86_64-linux"
+            "aarch64-linux"
+            "x86_64-darwin"
+            "aarch64-darwin"
+          ]
+          (
+            system:
+            let
+              pkgs = import nixpkgs {
+                inherit system;
+                overlays = [ rust-overlay.overlays.default ];
+              };
+            in
+            f {
+              inherit pkgs;
+              # The same toolchain rustup installs, including rust-analyzer and rust-src.
+              toolchain = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+            }
+          );
+    in
+    {
+      devShells = forEachSystem (
+        { pkgs, toolchain }:
+        {
+          default = pkgs.mkShell {
+            packages = [ toolchain ];
+          };
+        }
+      );
+{%- if has_bin %}
+
+      packages = forEachSystem (
+        { pkgs, toolchain }:
+        let
+          inherit (pkgs) lib;
+          rustPlatform = pkgs.makeRustPlatform {
+            cargo = toolchain;
+            rustc = toolchain;
+          };
+        in
+        {
+          default = rustPlatform.buildRustPackage {
+            pname = "{{project-name}}";
+            version = (lib.importTOML ./Cargo.toml).{% if is_workspace %}workspace.{% endif %}package.version;
+
+            # Only what Cargo reads, so editing docs or CI does not trigger a rebuild.
+            src = lib.fileset.toSource {
+              root = ./.;
+              fileset = lib.fileset.difference (lib.fileset.fileFilter (
+                file: file.hasExt "rs" || file.hasExt "toml" || file.name == "Cargo.lock"
+              ) ./.) (lib.fileset.maybeMissing ./target);
+            };
+
+            cargoLock.lockFile = ./Cargo.lock;
+{%- if is_workspace %}
+            cargoBuildFlags = [
+              "--package"
+              "{{project-name}}"
+            ];
+{%- endif %}
+
+            meta.mainProgram = "{{project-name}}";
+          };
+        }
+      );
+{%- endif %}
+
+      formatter = forEachSystem ({ pkgs, ... }: pkgs.nixfmt);
+    };
+}

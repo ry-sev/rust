@@ -1,0 +1,30 @@
+[package]
+name = "{{project-name}}"
+description = "{{description}}"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+readme.workspace = true
+repository.workspace = true
+license.workspace = true
+publish.workspace = true
+{%- if publish %}
+keywords.workspace = true
+categories.workspace = true
+{%- endif %}
+
+[dependencies]
+{{project-name}}-core.workspace = true
+anyhow.workspace = true
+{%- if cli %}
+clap.workspace = true
+{%- endif %}
+env_logger.workspace = true
+log.workspace = true
+{%- if async %}
+tokio.workspace = true
+{%- endif %}
+
+[lints]
+workspace = true

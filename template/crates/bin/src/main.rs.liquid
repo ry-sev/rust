@@ -1,0 +1,38 @@
+//! {{project-name}} binary.
+
+use std::io::{self, Write as _};
+{%- if cli %}
+
+use clap::Parser;
+
+/// Command-line arguments.
+#[derive(Debug, Parser)]
+#[command(version, about)]
+struct Args {
+    /// Who to greet.
+    #[arg(long, default_value = "world")]
+    name: String,
+}
+{%- endif %}
+{% if async %}
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+{%- else %}
+fn main() -> anyhow::Result<()> {
+{%- endif %}
+    env_logger::init();
+{%- if cli %}
+
+    let args = Args::parse();
+    log::debug!("{args:?}");
+    writeln!(io::stdout().lock(), "Hello, {}!", args.name)?;
+{%- else %}
+    writeln!(io::stdout().lock(), "Hello, world!")?;
+{%- endif %}
+{%- if is_workspace %}
+
+    let sum = {{lib_crate}}::add(2, 2)?;
+    log::info!("2 + 2 = {sum}");
+{%- endif %}
+    Ok(())
+}

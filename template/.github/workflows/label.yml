@@ -1,0 +1,41 @@
+name: Label
+
+# Labels a new pull request from its branch prefix, so the release notes sort it into the
+# right section (see .github/release.yml). A release/ branch's label keeps its version bump
+# out of the notes. A branch whose prefix has no section, such as chore/ or refactor/, gets
+# no label and lands under Other changes.
+#
+# pull_request_target, so that pull requests from forks are labelled too. It runs with
+# write access, so it MUST NOT check out or run the pull request's code. The branch name
+# is untrusted input and reaches the script only through the environment.
+
+on:
+  pull_request_target:
+    types: [opened, reopened]
+
+# Adding a label to a pull request goes through the issues API.
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  label:
+    name: Label from the branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Add the label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.pull_request.number }}
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          case "$BRANCH" in
+            feature/*) label=enhancement ;;
+            bugfix/* | hotfix/*) label=bug ;;
+            docs/*) label=documentation ;;
+            release/*) label=release ;;
+            *) echo "no label for $BRANCH"; exit 0 ;;
+          esac
+          gh api --method POST "repos/$REPO/issues/$NUMBER/labels" -f "labels[]=$label"

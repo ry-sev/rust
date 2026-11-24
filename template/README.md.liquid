@@ -28,23 +28,14 @@ Run tests:
 cargo test
 ```
 
-## Development
+## Contributing
 
-```bash
-# Format code
-cargo fmt --all
+See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md). The rest of `docs/`:
 
-# Run linter
-cargo clippy --all --all-features --tests -- -D warnings
-
-# Run tests
-cargo test
-{%- if layout != "lib" %}
-
-# Run with debug logging
-RUST_LOG=debug cargo run{% if is_workspace %} -p {{project-name}}{% endif %}
-{%- endif %}
-```
+- [development.md](docs/development.md): environment (including Nix), layout, building,
+  testing, and CI
+- [code-style.md](docs/code-style.md): formatting, linting, and conventions
+- [releasing.md](docs/releasing.md): cutting a release
 
 #### License
 

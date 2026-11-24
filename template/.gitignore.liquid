@@ -1,22 +1,12 @@
-*
+# Cargo build output
+/target
 
-!.gitignore
-!.gitattributes
+# Nix build output and direnv cache
+/result*
+/.direnv/
 
-!.github/
-!.github/workflows/
-!.github/ISSUE_TEMPLATE/
-!.github/**/*.yml
+# Machine-specific direnv overrides
+/.envrc.local
 
-!LICENSE
-!README.md
-
-!.cargo/
-
-!{{source_dir}}/
-!{{source_dir}}/**
-
-!*.rs
-!*.toml
-!*.lock
-!*.md
+# macOS
+.DS_Store

@@ -1,0 +1,39 @@
+//! {% if is_workspace %}Core library for {{project-name}}.{% else %}{{project-name}}{% endif %}
+
+/// Errors returned by this crate.
+#[derive(Debug, PartialEq, Eq, thiserror::Error)]
+pub enum Error {
+    /// The result does not fit in the output type.
+    #[error("arithmetic overflow")]
+    Overflow,
+}
+
+/// Adds two numbers.
+///
+/// # Errors
+///
+/// Returns [`Error::Overflow`] if the sum does not fit in a `u64`.
+///
+/// # Examples
+///
+/// ```
+/// assert_eq!({{lib_crate}}::add(2, 2), Ok(4));
+/// ```
+pub fn add(left: u64, right: u64) -> Result<u64, Error> {
+    left.checked_add(right).ok_or(Error::Overflow)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_adds() {
+        assert_eq!(add(2, 2), Ok(4));
+    }
+
+    #[test]
+    fn it_reports_overflow() {
+        assert_eq!(add(u64::MAX, 1), Err(Error::Overflow));
+    }
+}
