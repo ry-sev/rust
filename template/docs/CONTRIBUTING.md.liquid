@@ -1,0 +1,66 @@
+# Contributing
+
+Set up the environment and find your way around with [development.md](development.md).
+Code MUST follow [code-style.md](code-style.md).
+
+## Branches
+
+Always create a branch before starting a new feature or fix. Never commit directly to
+`main`. Each branch MUST cover one feature or fix only. A small, focused pull request is
+reviewed much faster than a large one that mixes unrelated changes.
+
+Branch names MUST start with a prefix that says what the branch does:
+
+| Prefix      | Use for                                          |
+| ----------- | ------------------------------------------------ |
+| `feature/`  | New functionality                                |
+| `bugfix/`   | Fixes for non-urgent bugs                        |
+| `hotfix/`   | Urgent fixes for released code                   |
+| `refactor/` | Code restructuring with no behavior change       |
+| `docs/`     | Documentation only                               |
+| `chore/`    | Tooling, dependencies, CI, and other upkeep      |
+| `release/`  | The version bump for a release, and nothing else |
+
+Example: `feature/websocket-inspection`, `bugfix/tls-handshake-timeout`, `release/v0.2.0`.
+
+The prefix also labels the pull request, which sorts it into the release notes; see
+[releasing.md](releasing.md).
+
+## Before Opening a Pull Request
+
+```bash
+cargo fmt --all                                           # Format code
+cargo clippy --all --all-features --tests -- -D warnings  # Lint (must pass)
+cargo test                                                # Run tests
+```
+
+All three MUST pass. CI runs them again, along with the checks described in
+[development.md](development.md#continuous-integration).
+
+## Merging
+
+Squash commits before merging. Each pull request MUST land on `main` as a single commit.
+
+The pull request's title becomes that commit's subject, so it MUST read as one: imperative
+mood, such as `Add websocket inspection`. The description becomes the commit body; keep
+it to facts the diff cannot show.
+
+## Repository Settings
+
+A new repository needs these set by hand.
+
+Under Settings → General → Pull Requests:
+
+- Allow only squash merging: untick "Allow merge commits" and "Allow rebase merging".
+- Set the squash commit message default to "Pull request title and description".
+
+Under Settings → Rules → Rulesets, add a branch ruleset targeting `main` with:
+
+- "Require a pull request before merging", so nothing reaches `main` without one.
+- "Require status checks to pass", with the one check **CI passed**. It appears in the
+  list only after CI has run once, so push a branch or open a pull request first.
+
+**CI passed** is the last job in `.github/workflows/ci.yml` and fails if any job before
+it failed. A pull request that touches only documentation skips the jobs that check code,
+and passes. A new CI job joins the requirement by being listed in its `needs`, with no
+change to these settings.

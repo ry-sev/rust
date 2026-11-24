@@ -1,0 +1,40 @@
+# Releasing
+
+Branch names carry a prefix, listed in [CONTRIBUTING.md](CONTRIBUTING.md#branches).
+`.github/workflows/label.yml` labels a new pull request from it, and
+`.github/release.yml` sorts the release notes by label:
+
+| Prefix               | Label           | Release notes section |
+| -------------------- | --------------- | --------------------- |
+| `feature/`           | `enhancement`   | Features              |
+| `bugfix/`, `hotfix/` | `bug`           | Fixes                 |
+| `docs/`              | `documentation` | Documentation         |
+| `release/`           | `release`       | Left out              |
+| Anything else        | None            | Other changes         |
+
+## Cutting a Release
+
+1. On a `release/` branch, bump `version` in {% if is_workspace %}`[workspace.package]`{% else %}`[package]`{% endif %} and merge it.
+2. Tag the merge with the same version and push the tag:
+   `git tag v0.2.0 && git push origin v0.2.0`. A tag that does not match the version
+   fails the workflow before anything is built.
+3. `.github/workflows/release.yml` drafts a GitHub release{% if has_bin %} with the executables for
+   Linux (x86_64, aarch64), macOS (Apple Silicon, Intel), and Windows (x86_64), plus a
+   `SHA256SUMS` list{% endif %}.
+   Review the draft and publish it by hand.
+{%- if has_bin %}
+
+Running the workflow from the Actions tab builds the same executables into a workflow
+artifact without making a release.
+
+The executables are not signed. A downloaded one needs `chmod +x` on Linux and macOS,
+and macOS quarantines it until `xattr -d com.apple.quarantine <file>`.
+{%- endif %}
+{%- if publish %}
+
+## Publishing to crates.io
+
+Before the first `cargo publish`, fill in `keywords` and `categories` in{% if is_workspace %}
+`[workspace.package]`. Publish `{{project-name}}-core` before `{{project-name}}`, which depends
+on it by version.{% else %} `[package]`.{% endif %}
+{%- endif %}

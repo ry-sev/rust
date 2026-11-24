@@ -1,0 +1,140 @@
+name: CI
+
+# Third-party actions are pinned to commits rather than tags, because a tag can be moved.
+# Dependabot keeps the pins and their version comments current.
+#
+# `CI passed` at the end is the one check to require before merging. A change that cannot
+# affect the build, such as one to the docs alone, skips the jobs that check code; a
+# skipped job counts as passed, so it can still merge.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Decides whether the change can affect the build. The list below is of files that
+  # cannot, so a file it does not name runs CI.
+  changes:
+    name: Detect code changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      # Full history for the diff, but no file contents: names are all it reads.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+
+      - id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          # The schedule and manual runs check everything, as does a push whose previous
+          # commit is unknown, such as the first push to a repository.
+          if [[ $EVENT != push && $EVENT != pull_request ]] \
+            || ! git cat-file -e "$BASE^{commit}" 2> /dev/null; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          code=false
+          while IFS= read -r file; do
+            case $file in
+              *.md | docs/* | LICENSE | .github/ISSUE_TEMPLATE/* | .github/release.yml) ;;
+              *)
+                code=true
+                break
+                ;;
+            esac
+          done < <(git diff --name-only "$BASE...$HEAD")
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
+  check:
+    name: Check
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Installs the toolchain and components from rust-toolchain.toml.
+      - run: rustup toolchain install
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --all --all-features --tests -- -D warnings
+      - run: cargo test --all-features
+      - run: cargo doc --no-deps --all-features
+        env:
+          RUSTDOCFLAGS: -D warnings
+
+  # Builds with the oldest Rust allowed by `rust-version` in Cargo.toml.
+  msrv:
+    name: MSRV
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Read rust-version
+        run: |
+          msrv=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].rust_version')
+          echo "MSRV=$msrv" >> "$GITHUB_ENV"
+      - run: rustup toolchain install "$MSRV" --profile minimal
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - run: cargo +"$MSRV" check --all-targets --all-features
+
+  deny:
+    name: Deny
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: EmbarkStudios/cargo-deny-action@81891abc19297b21343b15ef67dc61e4aea74fda # v2.1.4
+
+  # Tests against the newest dependency versions, which `Cargo.lock` hides. Not part of
+  # `CI passed`: it reports on what the dependencies did, not on the change.
+  latest-deps:
+    name: Latest dependencies
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: rustup toolchain install
+      - run: cargo update
+        env:
+          CARGO_RESOLVER_INCOMPATIBLE_RUST_VERSIONS: allow
+      - run: cargo test --all-features
+
+  # The one check to require in branch protection. It passes when every job it needs
+  # passed or was skipped, so a new job joins the requirement by being listed here, with
+  # no change to the repository's settings.
+  ci:
+    name: CI passed
+    needs: [changes, check, msrv, deny]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if a job failed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "::error::a required CI job failed or was cancelled"
+          exit 1

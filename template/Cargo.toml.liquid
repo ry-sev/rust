@@ -1,29 +1,44 @@
 {%- if is_workspace -%}
 [workspace]
-members = ["{{members_glob}}"]
+members = [{{workspace_members}}]
 resolver = "3"
 
 [workspace.package]
-version = "0.1.0"
-authors = ["{{author}}"]
-edition = "2024"
-readme = "README.md"
-repository = "{{repository}}"
-license = "MIT"
-publish = false
 {%- else -%}
 [package]
 name = "{{project-name}}"
 description = "{{description}}"
+{%- endif %}
 version = "0.1.0"
 authors = ["{{author}}"]
 edition = "2024"
+rust-version = "1.85"
 readme = "README.md"
 repository = "{{repository}}"
 license = "MIT"
-publish = false
+publish = {{publish}}
+{%- if publish %}
+keywords = []
+categories = []
+{%- endif %}
 
-[dependencies]
+{% if is_workspace %}[workspace.dependencies]{% else %}[dependencies]{% endif %}
+{%- if is_workspace %}
+{{project-name}}-core = { path = "{{core_path}}", version = "0.1.0" }
+{%- endif %}
+{%- if has_bin %}
+anyhow = "1"
+{%- if cli %}
+clap = { version = "4", features = ["derive"] }
+{%- endif %}
+env_logger = "0.11"
+log = "0.4"
+{%- endif %}
+{%- if has_lib %}
+thiserror = "2"
+{%- endif %}
+{%- if async %}
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 {%- endif %}
 
 [profile.release]
@@ -49,6 +64,9 @@ unused_lifetimes = "warn"
 trivial_casts = "warn"
 unused_qualifications = "warn"
 unexpected_cfgs = "warn"
+{%- if has_lib %}
+missing_docs = "warn"
+{%- endif %}
 
 {% if is_workspace %}[workspace.lints.clippy]{% else %}[lints.clippy]{% endif %}
 as_ptr_cast_mut = "warn"
@@ -123,6 +141,10 @@ match_wildcard_for_single_variants = "warn"
 mem_forget = "warn"
 mismatching_type_param_order = "warn"
 missing_enforced_import_renames = "warn"
+{%- if has_lib %}
+missing_errors_doc = "warn"
+missing_panics_doc = "warn"
+{%- endif %}
 missing_safety_doc = "warn"
 mixed_attributes_style = "warn"
 mut_mut = "warn"

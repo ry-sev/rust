@@ -1,5 +1,7 @@
 [template]
 cargo_generate_version = ">=0.19.0"
+# Copied without Liquid rendering, so workflows can use GitHub's `${{ }}` expressions.
+exclude = [".github/workflows/*"]
 
 [placeholders.layout]
 type = "string"
@@ -26,6 +28,21 @@ default = "Ricky Severino"
 type = "string"
 prompt = "GitHub owner"
 default = "ry-sev"
+
+[placeholders.publish]
+type = "bool"
+prompt = "Publish to crates.io?"
+default = false
+
+[conditional.'layout != "lib"'.placeholders.cli]
+type = "bool"
+prompt = "Command-line parsing (clap)?"
+default = false
+
+[conditional.'layout != "lib"'.placeholders.async]
+type = "bool"
+prompt = "Async runtime (tokio)?"
+default = false
 
 [hooks]
 pre = ["pre-script.rhai"]

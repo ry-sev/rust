@@ -1,0 +1,163 @@
+# Development
+
+## Environment
+
+`flake.nix` provides a dev shell with the toolchain from `rust-toolchain.toml`. With
+direnv, `.envrc` loads it on `cd`; without, run `nix develop`. Personal environment
+variables go in `.envrc.local`, which is ignored by git.
+
+Nix flakes only see files tracked by git: `git add` a new file before Nix commands use
+it.
+
+`rust-toolchain.toml` is the single toolchain definition. rustup and Nix both read it;
+change the channel or components there.
+
+Without Nix, install Rust with [rustup](https://rustup.rs). It reads `rust-toolchain.toml`
+and installs the same toolchain and components on first use.
+
+## Project Layout
+{% case layout %}{% when "bin" %}
+```
+{{project-name}}/
+├── Cargo.toml   # Package manifest: metadata, dependencies, lints, profiles
+└── src/
+    └── main.rs  # Binary entry point
+```
+
+A single binary crate. Add modules as `src/<module>.rs` or `src/<module>/mod.rs`.
+{% when "lib" %}
+```
+{{project-name}}/
+├── Cargo.toml  # Package manifest: metadata, dependencies, lints, profiles
+└── src/
+    └── lib.rs  # Crate root and public API surface
+```
+
+A single library crate. Everything reachable from `lib.rs` is public API — see
+[Documentation](code-style.md#documentation).
+{% when "workspace" %}
+```
+{{project-name}}/
+├── Cargo.toml  # Workspace root: shared metadata, dependencies, lints, profiles
+└── crates/
+    ├── {{project-name}}/
+    │   ├── Cargo.toml
+    │   └── src/main.rs
+    └── {{project-name}}-core/
+        ├── Cargo.toml
+        └── src/lib.rs
+```
+
+A Cargo workspace with a binary crate, `{{project-name}}`, and a library crate,
+`{{project-name}}-core`. Members live under `crates/` and are picked up by the
+`crates/*` glob, so a new crate needs no edit to the root manifest.
+{% when "members" %}
+```
+{{project-name}}/
+├── Cargo.toml  # Workspace root: shared metadata, dependencies, lints, profiles
+├── {{project-name}}/
+│   ├── Cargo.toml
+│   └── src/main.rs
+└── {{project-name}}-core/
+    ├── Cargo.toml
+    └── src/lib.rs
+```
+
+A Cargo workspace with a binary crate, `{{project-name}}`, and a library crate,
+`{{project-name}}-core`. Its members sit at the repository root. A new crate MUST be
+added to `workspace.members` in the root `Cargo.toml`; there is no glob.
+{% endcase %}{% if is_workspace %}
+### Workspace Rules
+
+- Logic belongs in `{{project-name}}-core`, where it is testable and documented as a
+  library. `{{project-name}}` stays thin: argument parsing, logging setup, and output.
+- Shared metadata lives in `[workspace.package]`. Members MUST inherit it with
+  `version.workspace = true`, `edition.workspace = true`, and so on. Only `name`
+  and `description` are set per crate.
+- Lints live in `[workspace.lints]`. Every member MUST opt in with:
+
+  ```toml
+  [lints]
+  workspace = true
+  ```
+
+- Dependencies shared by more than one member SHOULD be declared in
+  `[workspace.dependencies]` and referenced with `dep.workspace = true`.
+{% endif %}
+## Build and Run
+
+```bash
+cargo build                 # Build (debug)
+cargo build --release       # Build (release, optimized)
+{% if layout == "lib" %}cargo check                 # Check without building
+cargo doc --open            # Build and open the API docs
+{% elsif is_workspace %}cargo check --workspace     # Check without building
+cargo doc --open            # Build and open the API docs
+
+# Run the binary
+cargo run -p {{project-name}}
+
+# Run with info-level logging
+RUST_LOG=info cargo run -p {{project-name}}
+{% else %}cargo run                   # Run the binary
+RUST_LOG=info cargo run     # Run with info-level logging
+cargo check                 # Check without building
+{% endif %}```
+{%- if has_bin %}
+
+Logging goes to stderr through `env_logger`, initialized at the top of `main`. Only
+errors print by default; `RUST_LOG` raises the level (`debug`, `info`, ...) or filters by
+module (`RUST_LOG={{crate_name}}=debug`).
+
+Nix builds the binary from a clean copy of the sources:
+
+```bash
+nix build                   # Build the binary into ./result
+nix run                     # Build and run it
+```
+
+`nix build` reads `Cargo.lock`. Commit it, and run `cargo build` once first in a new
+checkout that lacks it.
+{%- endif %}
+
+## Testing
+
+```bash
+cargo test                    # Run all tests{% if is_workspace %}, every member{% endif %}
+cargo test test_name          # Run a single test by name
+cargo test module_name::      # Run tests in a specific module
+cargo test -- --nocapture     # Run tests with output
+cargo test --lib              # Run only unit tests (no integration tests){% if has_lib %}
+cargo test --doc              # Run only doc-comment examples{% endif %}{% if is_workspace %}
+
+# Run tests for a single crate
+cargo test -p {{project-name}}-core{% endif %}
+```
+
+## Continuous Integration
+
+`.github/workflows/ci.yml` runs on every push to `main` and every pull request. Its
+actions are pinned to commits; Dependabot keeps the pins current.
+
+- **Detect code changes**: diffs the change against its base. When every changed file is
+  one that cannot affect the build (Markdown, `docs/`, `LICENSE`, the issue templates,
+  `.github/release.yml`), the jobs below are skipped.
+- **check**: formatting, clippy, tests, and `cargo doc` with warnings denied
+- **msrv**: `cargo check` with the oldest Rust allowed by `rust-version` in {% if is_workspace %}the root
+  `Cargo.toml`{% else %}`Cargo.toml`{% endif %}
+- **deny**: `cargo deny check` against `deny.toml` (licenses, advisories, sources)
+- **CI passed**: fails if any job above failed. It is the check `main` requires before a
+  pull request merges; see [CONTRIBUTING.md](CONTRIBUTING.md#repository-settings).
+
+A file type that can affect the build MUST NOT be added to the list in **Detect code
+changes**. A Markdown file that becomes code, such as a README included as crate docs with
+`#![doc = include_str!(...)]`, MUST be taken off it.
+
+A weekly scheduled run checks everything and adds **latest-deps**, which runs
+`cargo update` before testing to catch breakage from new dependency releases that
+`Cargo.lock` hides. It is not part of **CI passed**. Dependabot opens
+weekly update PRs for Cargo and GitHub Actions.
+
+Raising `rust-version` is a deliberate change: dependencies that need a newer Rust fail
+the **msrv** job until it is raised. A new dependency license that `deny.toml` does not
+allow fails **deny**; add it to `licenses.allow` only after checking it.

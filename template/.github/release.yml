@@ -1,0 +1,24 @@
+# Sorts the pull requests a release lists into sections by label. GitHub reads this when
+# the release workflow creates a draft with --generate-notes. A pull request goes in the
+# first section whose labels it carries; one with none of them goes under Other changes.
+# A version bump, labelled release, is left out.
+changelog:
+  exclude:
+    labels:
+      - duplicate
+      - invalid
+      - wontfix
+      - release
+  categories:
+    - title: Features
+      labels:
+        - enhancement
+    - title: Fixes
+      labels:
+        - bug
+    - title: Documentation
+      labels:
+        - documentation
+    - title: Other changes
+      labels:
+        - "*"
