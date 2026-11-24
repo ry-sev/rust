@@ -10,8 +10,7 @@ template/
 ├── cargo-generate.toml   # Placeholders and hooks
 ├── pre-script.rhai       # Moves the chosen crates into place, derives variables
 ├── Cargo.toml.liquid     # Root manifest for every layout; all dependency versions
-├── AGENTS.md.liquid      # Generated project's agent guide: links into docs/
-├── CLAUDE.md             # `@` imports of AGENTS.md and every doc
+├── AGENTS.md.liquid      # Generated project's agent guide: `@` imports of docs/
 ├── docs/                 # CONTRIBUTING, development, code-style, releasing
 ├── README.md.liquid
 ├── LICENSE.liquid
@@ -78,10 +77,15 @@ derived variables the templates branch on:
   `git ls-remote --tags https://github.com/<owner>/<action>.git`, taking the `^{}` line
   for an annotated tag.
 - The generated project's rules live in `template/docs/`, written for people.
-  `AGENTS.md.liquid` only links to them, with when each must be read, and holds the
-  quick reference; `CLAUDE.md` imports them so Claude has them loaded. A new rule goes
-  in a doc, never in `AGENTS.md.liquid`. A new doc gets a link in `AGENTS.md.liquid`,
-  an import in `CLAUDE.md`, and an entry in `README.md.liquid`.
+  `AGENTS.md.liquid` lists them, with when each must be read, and holds the quick
+  reference. Each entry is a bare `@docs/<file>.md` path: Claude Code expands it as an
+  import, so the docs load with `AGENTS.md`, and other agents read it as a path. An
+  `@path` inside backticks is not imported. A new rule goes in a doc, never in
+  `AGENTS.md.liquid`. A new doc gets an entry in `AGENTS.md.liquid` and in
+  `README.md.liquid`.
+- There is no `CLAUDE.md`, here or generated. Claude Code reads `AGENTS.md` itself when
+  no `CLAUDE.md` exists, and reads only `CLAUDE.md` when one does, so adding one would
+  hide `AGENTS.md` unless it imports it.
 - Symbolic links are skipped by `cargo-generate`. Use an `@file` import instead.
 - A repository-level file MUST NOT share a name with a generated one. `ignore` in
   `cargo-generate.toml` drops the `.liquid` counterpart along with it, which is why

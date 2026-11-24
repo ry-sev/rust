@@ -52,8 +52,8 @@ Every layout carries:
   checksums; pull requests are labelled from their branch prefix
 - A `docs/` folder for contributors: `CONTRIBUTING.md` (branches, merging),
   `development.md`, `code-style.md`, and `releasing.md`
-- An `AGENTS.md` that points coding agents at those docs, and a `CLAUDE.md` that
-  imports them
+- An `AGENTS.md` that points coding agents at those docs, which Claude Code loads as
+  imports
 - An MIT license
 
 See [AGENTS.md](AGENTS.md) for how the template is put together.
