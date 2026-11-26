@@ -23,21 +23,24 @@ template/
     └── lib/              # Cargo.toml.liquid (workspace member), src/lib.rs.liquid
 ```
 
-Everything outside `crates/` is shared by all four layouts. Files ending in
+Everything outside `crates/` is shared by all five layouts. Files ending in
 `.liquid` have the suffix stripped on generation.
 
-## The Four Layouts
+## The Five Layouts
 
-| Value       | Shape                                                       |
-| ----------- | ----------------------------------------------------------- |
-| `bin`       | Single crate, `src/main.rs`                                 |
-| `lib`       | Single crate, `src/lib.rs`                                  |
-| `workspace` | Virtual workspace, `crates/<name>/` + `crates/<name>-core/` |
-| `members`   | Virtual workspace, `<name>/` + `<name>-core/` in the root   |
+| Value           | Shape                                                       |
+| --------------- | ----------------------------------------------------------- |
+| `bin`           | Single crate, `src/main.rs`                                 |
+| `lib`           | Single crate, `src/lib.rs`                                  |
+| `workspace`     | Virtual workspace, `crates/<name>/` + `crates/<name>-core/` |
+| `members`       | Virtual workspace, `<name>/` + `<name>-core/` in the root   |
+| `lib-workspace` | Virtual workspace, a single library at `crates/<name>/`     |
 
 Single-crate layouts take `src/` from `crates/bin` or `crates/lib` and use the root
-manifest as their package. Workspace layouts take both crates with their member
-manifests: the binary is named `<name>`, the library `<name>-core`.
+manifest as their package. `workspace` and `members` take both crates with their member
+manifests: the binary is named `<name>`, the library `<name>-core`. `lib-workspace`
+takes only `crates/lib`, with its member manifest, as `crates/<name>/`; alone, the
+library is named `<name>`.
 
 ## Placeholders
 
@@ -48,11 +51,12 @@ when the layout has a binary.
 `pre-script.rhai` moves the crates into place, deletes the rest, and sets the
 derived variables the templates branch on:
 
-- `is_workspace` — true for `workspace` and `members`
+- `is_workspace` — true for `workspace`, `members`, and `lib-workspace`
 - `has_bin`, `has_lib` — which crate kinds the project contains
 - `cli`, `async` — set to `false` when not asked, so templates may test them freely
 - `workspace_members` — the contents of the `workspace.members` array
-- `core_path` — path to the library crate, for its path dependency
+- `lib_name` — the library's package name: `<name>-core` beside a binary, else `<name>`
+- `lib_path` — path to the library crate, for its path dependency
 - `lib_crate` — the library's Rust name, for doc tests and `use` paths
 - `repository`, `year` — for the manifest, issue templates, and LICENSE
 
@@ -100,7 +104,7 @@ derived variables the templates branch on:
 ./scripts/check-templates.sh
 ```
 
-Generates all four layouts, plus `bin` and `workspace` with every option on, into a
+Generates all five layouts, plus `bin` and `workspace` with every option on, into a
 temporary directory. Each runs `cargo fmt --check`, `cargo clippy -D warnings`,
 `cargo test`, and `cargo doc` for library layouts. When installed, it also runs
 shellcheck, actionlint on the generated workflows, `cargo deny check`, and the flake

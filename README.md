@@ -1,7 +1,7 @@
 # rust
 
 A [`cargo-generate`](https://github.com/cargo-generate/cargo-generate) template for
-Rust projects, in four layouts.
+Rust projects, in five layouts.
 
 ## Usage
 
@@ -12,15 +12,17 @@ cargo generate ry-sev/rust
 
 You are prompted for a layout:
 
-| Value       | Shape                                                       |
-| ----------- | ----------------------------------------------------------- |
-| `bin`       | Single crate, `src/main.rs`                                 |
-| `lib`       | Single crate, `src/lib.rs`                                  |
-| `workspace` | Virtual workspace, `crates/<name>/` + `crates/<name>-core/` |
-| `members`   | Virtual workspace, `<name>/` + `<name>-core/` in the root   |
+| Value           | Shape                                                       |
+| --------------- | ----------------------------------------------------------- |
+| `bin`           | Single crate, `src/main.rs`                                 |
+| `lib`           | Single crate, `src/lib.rs`                                  |
+| `workspace`     | Virtual workspace, `crates/<name>/` + `crates/<name>-core/` |
+| `members`       | Virtual workspace, `<name>/` + `<name>-core/` in the root   |
+| `lib-workspace` | Virtual workspace, a single library at `crates/<name>/`     |
 
-Workspace layouts split a thin binary (`<name>`) from a library holding the logic
-(`<name>-core`).
+`workspace` and `members` split a thin binary (`<name>`) from a library holding the
+logic (`<name>-core`). `lib-workspace` is for a library that may grow into several
+crates: it starts as one, `<name>`, and new crates go next to it under `crates/`.
 
 You are also asked for a description, author, GitHub owner, and whether to publish
 to crates.io. Layouts with a binary additionally offer clap (`cli`) and tokio

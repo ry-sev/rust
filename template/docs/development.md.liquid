@@ -66,11 +66,25 @@ A Cargo workspace with a binary crate, `{{project-name}}`, and a library crate,
 A Cargo workspace with a binary crate, `{{project-name}}`, and a library crate,
 `{{project-name}}-core`. Its members sit at the repository root. A new crate MUST be
 added to `workspace.members` in the root `Cargo.toml`; there is no glob.
+{% when "lib-workspace" %}
+```
+{{project-name}}/
+├── Cargo.toml  # Workspace root: shared metadata, dependencies, lints, profiles
+└── crates/
+    └── {{project-name}}/
+        ├── Cargo.toml
+        └── src/lib.rs  # Crate root and public API surface
+```
+
+A Cargo workspace with one library crate, `{{project-name}}`. Members live under
+`crates/` and are picked up by the `crates/*` glob, so a new crate needs no edit to the
+root manifest. Everything reachable from a crate's `lib.rs` is public API — see
+[Documentation](code-style.md#documentation).
 {% endcase %}{% if is_workspace %}
 ### Workspace Rules
-
+{% if has_bin %}
 - Logic belongs in `{{project-name}}-core`, where it is testable and documented as a
-  library. `{{project-name}}` stays thin: argument parsing, logging setup, and output.
+  library. `{{project-name}}` stays thin: argument parsing, logging setup, and output.{% endif %}
 - Shared metadata lives in `[workspace.package]`. Members MUST inherit it with
   `version.workspace = true`, `edition.workspace = true`, and so on. Only `name`
   and `description` are set per crate.
@@ -83,6 +97,8 @@ added to `workspace.members` in the root `Cargo.toml`; there is no glob.
 
 - Dependencies shared by more than one member SHOULD be declared in
   `[workspace.dependencies]` and referenced with `dep.workspace = true`.
+- `{{lib_name}}` is declared there with its path and version, so a member that uses it
+  adds `{{lib_name}}.workspace = true`.
 {% endif %}
 ## Build and Run
 
@@ -90,6 +106,8 @@ added to `workspace.members` in the root `Cargo.toml`; there is no glob.
 cargo build                 # Build (debug)
 cargo build --release       # Build (release, optimized)
 {% if layout == "lib" %}cargo check                 # Check without building
+cargo doc --open            # Build and open the API docs
+{% elsif layout == "lib-workspace" %}cargo check --workspace     # Check without building
 cargo doc --open            # Build and open the API docs
 {% elsif is_workspace %}cargo check --workspace     # Check without building
 cargo doc --open            # Build and open the API docs
@@ -131,7 +149,7 @@ cargo test --lib              # Run only unit tests (no integration tests){% if 
 cargo test --doc              # Run only doc-comment examples{% endif %}{% if is_workspace %}
 
 # Run tests for a single crate
-cargo test -p {{project-name}}-core{% endif %}
+cargo test -p {{lib_name}}{% endif %}
 ```
 
 ## Continuous Integration

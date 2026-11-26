@@ -52,16 +52,16 @@ Undocumented members need no blank line between them.
 ## Error Handling
 
 {% if layout == "bin" %}- Use `anyhow` for errors; `main` returns `anyhow::Result<()>`. Add `thiserror` if a
-  module needs a typed error.{% elsif layout == "lib" %}- Use `thiserror` for errors. The crate's `Error` enum lives in `lib.rs`.{% else %}- Use `thiserror` in `{{project-name}}-core`, whose `Error` enum lives in `lib.rs`, and
-  `anyhow` in `{{project-name}}`.{% endif %}
+  module needs a typed error.{% elsif has_bin %}- Use `thiserror` in `{{lib_name}}`, whose `Error` enum lives in `lib.rs`, and
+  `anyhow` in `{{project-name}}`.{% else %}- Use `thiserror` for errors. The crate's `Error` enum lives in `lib.rs`.{% endif %}
 - Prefer `Result<T, E>` over panics
 - Use `expect()` only when failure is truly impossible or during initialization
 - Never use `unwrap()` in library code
 
 ## Logging
 
-{% if layout == "lib" %}`log` is not a dependency yet. Add it with `cargo add log` before logging, and leave
-choosing a logger to the application. Use the macros:{% else %}Use the `log` crate macros:{% endif %}
+{% if has_bin %}Use the `log` crate macros:{% else %}`log` is not a dependency yet. Add it with `cargo add log` before logging, and leave
+choosing a logger to the application. Use the macros:{% endif %}
 
 ```rust
 log::info!("...");
@@ -76,7 +76,7 @@ log::error!("...");
 - Include examples in doc comments for complex functions
 - Use `//!` for module-level documentation
 - Keep comments concise and up-to-date
-{%- if layout == "lib" %}
+{%- unless has_bin %}
 - Every item exported from `lib.rs` MUST carry a `///` doc comment
 - Doc examples are compiled and run by `cargo test`; keep them working
-{%- endif %}
+{%- endunless %}

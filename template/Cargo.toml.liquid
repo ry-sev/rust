@@ -24,7 +24,7 @@ categories = []
 
 {% if is_workspace %}[workspace.dependencies]{% else %}[dependencies]{% endif %}
 {%- if is_workspace %}
-{{project-name}}-core = { path = "{{core_path}}", version = "0.1.0" }
+{{lib_name}} = { path = "{{lib_path}}", version = "0.1.0" }
 {%- endif %}
 {%- if has_bin %}
 anyhow = "1"

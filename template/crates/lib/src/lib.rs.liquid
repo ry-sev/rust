@@ -1,4 +1,4 @@
-//! {% if is_workspace %}Core library for {{project-name}}.{% else %}{{project-name}}{% endif %}
+//! {% if has_bin %}Core library for {{project-name}}.{% else %}{{project-name}}{% endif %}
 
 /// Errors returned by this crate.
 #[derive(Debug, PartialEq, Eq, thiserror::Error)]

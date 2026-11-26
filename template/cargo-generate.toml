@@ -8,10 +8,11 @@ type = "string"
 prompt = "Project layout"
 default = "bin"
 choices = [
-    { value = "bin", label = "bin        single crate, src/main.rs" },
-    { value = "lib", label = "lib        single crate, src/lib.rs" },
-    { value = "workspace", label = "workspace  crates/<name>/" },
-    { value = "members", label = "members    workspace, <name>/ at the repo root" },
+    { value = "bin", label = "bin            single crate, src/main.rs" },
+    { value = "lib", label = "lib            single crate, src/lib.rs" },
+    { value = "workspace", label = "workspace      crates/<name>/ + crates/<name>-core/" },
+    { value = "members", label = "members        workspace, <name>/ at the repo root" },
+    { value = "lib-workspace", label = "lib-workspace  workspace, library only, crates/<name>/" },
 ]
 
 [placeholders.description]
@@ -34,12 +35,12 @@ type = "bool"
 prompt = "Publish to crates.io?"
 default = false
 
-[conditional.'layout != "lib"'.placeholders.cli]
+[conditional.'layout != "lib" && layout != "lib-workspace"'.placeholders.cli]
 type = "bool"
 prompt = "Command-line parsing (clap)?"
 default = false
 
-[conditional.'layout != "lib"'.placeholders.async]
+[conditional.'layout != "lib" && layout != "lib-workspace"'.placeholders.async]
 type = "bool"
 prompt = "Async runtime (tokio)?"
 default = false

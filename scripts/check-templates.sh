@@ -28,6 +28,7 @@ cases=(
 	"lib lib"
 	"workspace workspace"
 	"members members"
+	"lib-workspace lib-workspace"
 	"bin-all bin ${all[*]}"
 	"workspace-all workspace ${all[*]}"
 )
@@ -69,7 +70,7 @@ for case in "${cases[@]}"; do
 		if has nix && [[ -z ${SKIP_NIX:-} ]]; then
 			nix_ flake check
 			nix_ develop --command cargo --version
-			if [[ $layout != lib ]]; then
+			if [[ $layout != lib && $layout != lib-workspace ]]; then
 				nix_ build
 				./result/bin/"check-$name"
 			fi

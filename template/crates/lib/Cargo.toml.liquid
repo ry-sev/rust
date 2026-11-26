@@ -1,6 +1,6 @@
 [package]
-name = "{{project-name}}-core"
-description = "Core library for {{project-name}}"
+name = "{{lib_name}}"
+description = "{% if has_bin %}Core library for {{project-name}}{% else %}{{description}}{% endif %}"
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
